@@ -123,8 +123,9 @@ class CreateCommand(BaseCommand):
     @property
     def app_template_url(self):
         "The URL for a cookiecutter repository to use when creating apps"
-        return 'https://github.com/beeware/briefcase-{self.platform}-{self.output_format}-template.git'.format(
-            self=self
+        return 'https://github.com/{repo}/briefcase-{self.platform}-{self.output_format}-template.git'.format(
+            self=self,
+            repo='remico' if 'linux' == self.platform.lower() and 'appimage' == self.output_format.lower() else 'beeware'
         )
 
     @property
