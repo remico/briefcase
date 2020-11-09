@@ -42,12 +42,20 @@ class LinuxAppImageMixin(LinuxMixin):
             help="Don't use Docker for building the AppImage",
             required=False,
         )
+        parser.add_argument(
+            '--trim-ps2',
+            dest='trim_ps2',
+            action='store_true',
+            help='Analyze required PySide2 modules, then remove all unused .so libs from PySide2 directory. '
+                 'This will significantly reduce the size of an output AppImage, and help to avoid build errors due to unmet [redundant] dependencies'
+        )
 
     def parse_options(self, extra):
         """Extract the use_docker option"""
         options = super().parse_options(extra)
 
         self.use_docker = options.pop('use_docker')
+        self.trim_ps2 = options.pop('trim_ps2')
 
         return options
 
@@ -55,6 +63,8 @@ class LinuxAppImageMixin(LinuxMixin):
         """Clone the use_docker option"""
         super().clone_options(command)
         self.use_docker = command.use_docker
+        self.trim_ps2 = command.trim_ps2
+
 
     def docker_image_tag(self, app):
         "The Docker image tag for an app"
@@ -188,6 +198,32 @@ class LinuxAppImageBuildCommand(LinuxAppImageMixin, BuildCommand):
             # Build the app image. We use `--appimage-extract-and-run`
             # because AppImages won't run natively inside Docker.
             with self.dockerize(app) as docker:
+                if self.trim_ps2:
+                    # add shiboken2 library path for linuxdeploy
+                    app_packages_path = str(self.app_packages_path(app)).replace(str(self.platform_path), "/app")
+                    env.update({"LD_LIBRARY_PATH": app_packages_path + "/shiboken2"})
+
+                    extra_kwargs = {}
+
+                    if self.use_docker:
+                        docker_args = []
+                        docker_args.extend(["--rm"])
+                        docker_args.extend(["-e", "QT_X11_NO_MITSHM=1"])
+                        docker_args.extend(["-e", "DISPLAY"])
+                        docker_args.extend(["-e", "GITHUB_TOKEN"])
+                        docker_args.extend(["--volume", "/tmp/.X11-unix:/tmp/.X11-unix:rw"])
+                        extra_kwargs["docker_args"] = docker_args
+
+                    py_executable = self.appdir_path(app) / "usr/bin/python3"
+
+                    docker.run(
+                        [py_executable, "-m", "trim_ps2", app.module_name],
+                        env=env,
+                        check=True,
+                        cwd=str(self.platform_path),
+                        **extra_kwargs
+                    )
+
                 docker.run(
                     [
                         str(self.linuxdeploy.appimage_path),

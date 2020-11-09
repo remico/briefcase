@@ -256,6 +256,8 @@ class Docker:
             ),
         ]
 
+        docker_args.extend(kwargs.pop("docker_args", []))
+
         # If any environment variables have been defined, pass them in
         # as --env arguments to Docker.
         if env:
