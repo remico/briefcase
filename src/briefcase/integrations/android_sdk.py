@@ -82,9 +82,10 @@ class AndroidSDK:
 
     @property
     def env(self):
+        sdk_root_system = Path(self.command.os.getenv('HOME'), "Android/Sdk")
         return {
             **self.command.os.environ,
-            "ANDROID_SDK_ROOT": str(self.root_path),
+            "ANDROID_SDK_ROOT": str(sdk_root_system) if sdk_root_system.exists() else str(self.root_path),
             "JAVA_HOME": str(self.jdk.java_home),
         }
 
@@ -117,6 +118,10 @@ class AndroidSDK:
         """
         if jdk is None:
             jdk = JDK.verify(command, install=install)
+
+        sdk_root_system = Path(command.os.getenv('HOME'), "Android/Sdk")
+        if sdk_root_system.exists() and not command.os.getenv("ANDROID_SDK_ROOT"):
+            command.os.environ['ANDROID_SDK_ROOT'] = str(sdk_root_system)
 
         sdk_root = command.os.environ.get("ANDROID_SDK_ROOT")
         if sdk_root:
