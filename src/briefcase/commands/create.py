@@ -125,7 +125,7 @@ class CreateCommand(BaseCommand):
         "The URL for a cookiecutter repository to use when creating apps"
         return 'https://github.com/{repo}/briefcase-{self.platform}-{self.output_format}-template.git'.format(
             self=self,
-            repo='remico' if 'linux' == self.platform.lower() and 'appimage' == self.output_format.lower() else 'beeware'
+            repo='remico' if 'linux' == self.platform.lower() and 'appimage' == self.output_format.lower() or 'android' == self.platform.lower() else 'beeware'
         )
 
     @property
